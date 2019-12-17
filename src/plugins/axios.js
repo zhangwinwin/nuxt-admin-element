@@ -26,8 +26,8 @@ export default function({$axios, store, app, redirect}) {
       config.headers.common['Authorization'] = `Bearer ${store.state.token}`
     }
 
-    url += url.indexOf('?') > -1 ? '&' : '?'
-    url += `_=${new Date().getTime()}`
+    // url += url.indexOf('?') > -1 ? '&' : '?'
+    // url += `_=${new Date().getTime()}`
 
     config.url = url
 

@@ -1,7 +1,7 @@
 <template>
   <div class="wrapper">
     <div class="left">
-      <div class="defaultList">
+      <!-- <div class="defaultList">
         <div class="title">默认列表</div>
         <ul class="list">
           <li
@@ -23,7 +23,7 @@
             企业基础设施({{ defaultHost.infrHostCount }})
           </li>
         </ul>
-      </div>
+      </div> -->
       <div class="project-list">
         <div class="title">工程列表</div>
         <el-input placeholder="" v-model="filterText" size="small"> </el-input>
@@ -46,22 +46,32 @@
       </div>
     </div>
     <div class="right">
-      <el-data-table
+      <el-table style="width: 100%" stripe border :data="hostTableList" v-loading='loading'>
+        <el-table-column :prop="item.prop" :label="item.label" v-for="(item, index) in hostTableConfig.columns" :key="index" :width="item.width"></el-table-column>
+      </el-table>
+      <pagination :pagination='pagination' v-on:sizeChange="handlePagination"></pagination>
+      <!-- <el-data-table
         v-bind="hostTableConfig"
         :searchForm="searchForm"
         :customQuery="customQuery"
         ref="dataTable"
-      />
+      /> -->
     </div>
   </div>
 </template>
 
 <script>
+import { mapActions } from 'vuex'
+import pagination from '../components/pagination'
 export default {
   layout: 'nav',
   data() {
     return {
       defaultHost: {},
+      searchParams: {
+        page: 1,
+        per_page: 20
+      },
       projectProps: {
         label: 'name',
         children: 'children',
@@ -69,11 +79,11 @@ export default {
       },
       filterText: '',
       hostTableConfig: {
-        url: '/hire/hostList',
-        dataPath: 'payload.list',
-        totalPath: 'payload.totalPage',
-        hasNew: false,
-        hasOperation: false,
+        // url: '/hire/hostList',
+        // dataPath: 'payload.list',
+        // totalPath: 'payload.totalPage',
+        // hasNew: false,
+        // hasOperation: false,
         columns: [
           {
             label: '外网IP',
@@ -112,6 +122,8 @@ export default {
           options: []
         }
       ],
+      loading: false,
+      pagination: {},
       customQuery: {
         type: 'allHost'
       },
@@ -123,15 +135,23 @@ export default {
       this.$refs.projectTree.filter(val)
     }
   },
-  mounted() {
-    this.getDefaultCount()
-    this.getCategoryTags()
+  computed: {
+    hostTableList () {
+      return this.$store.state.hostTableList
+    }
+  },
+  components: {
+    pagination
   },
   methods: {
-    getDefaultCount() {
-      this.$axios.$get('/hire/getHostCount').then(res => {
-        this.defaultHost = res.payload
-      })
+    ...mapActions(['setHostTableList']),
+    handlePagination (type, val) {
+      if (type === 'currentChange') {
+        this.searchParams.per_page = val
+      } else {
+        this.searchParams.per_page = val
+      }
+
     },
     searchProject(value, data) {
       if (!value) return true
@@ -231,8 +251,20 @@ export default {
       this.customQuery.id = data.id
       this.currentLi = data.type
       this.$refs.dataTable.resetSearch()
+    },
+    fetchHostTableList () {
+      this.$axios.get('/api/hostList').then(res => {
+        this.setHostTableList(res.data.data)
+        this.pagination = res.data.pagination
+      })
     }
-  }
+  },
+  mounted() {
+    this.getCategoryTags()
+  },
+  created () {
+    this.fetchHostTableList()
+  },
 }
 </script>
 <style lang="less">
@@ -275,6 +307,7 @@ export default {
 
   .right {
     padding: 24px;
+    width: calc(100vw - 600px);
   }
 }
 </style>
