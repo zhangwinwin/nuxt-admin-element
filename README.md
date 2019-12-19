@@ -70,7 +70,7 @@ api/projectList
 |per_page |number   |  页码条数|
 
 
-###vuex
+### vuex
 ```
 state={
   hostTableList: [], // 页面列表信息
@@ -93,17 +93,17 @@ actions = {
 }
  ```
 
-##install
+## install
 ```
 $ npm install
 ```
 
-##Usage
+## Usage
 ```
 $ npm run dev
 ```
 
-##详细介绍
+## 详细介绍
 页面列表数据默认是请求/api/hostList/0  
 点击默认菜单：  
 * 点击全部主机，请求URL：/api/hostList/0?type=allHost  
