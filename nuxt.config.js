@@ -16,7 +16,6 @@ const config = {
   env: {
     mock: {},
     dev: {
-      '/hire': 'http://39.100.141.76:3000/mock/1264',
       '/api': 'http://yapi.demo.qunar.com/mock/58024'
     }
   }
