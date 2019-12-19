@@ -112,12 +112,10 @@ export default {
         this.setPaginationConfig(res.data.pagination)
       })
     },
-    handleSearch () {
-      let url = this.hostUrl
-      this.searchParams.keyword = this.searchForm[0][0].keyword
-      this.searchParams.selectTag = this.searchForm[0][1].keyword
+    changeUrlPath (path) {
+      let url = path
       const keys = Object.keys(this.searchParams)
-      if (this.hostUrl.indexOf('?') !== -1) {
+      if (path.indexOf('?') !== -1) {
         let query = url.split('?')
         if (query[1].indexOf('&') !== -1) {
           let queryOne = query[1].split('&')[0]
@@ -135,7 +133,12 @@ export default {
           }
         })
       }
-      this.setHostUrl(url)
+      return url
+    },
+    handleSearch () {
+      this.searchParams.keyword = this.searchForm[0][0].keyword
+      this.searchParams.selectTag = this.searchForm[0][1].keyword
+      this.setHostUrl(this.changeUrlPath(this.hostUrl))
     }
   },
   created () {
