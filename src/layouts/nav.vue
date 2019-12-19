@@ -10,9 +10,26 @@
     </section>
     <section class="nav__main">
       <section class="nav__right">
-        <p class="navBar__lists--item">全部主机(12)</p>
-        <p class="navBar__lists--item">空闲主机池(2)</p>
-        <p class="navBar__lists--item">企业基础设施(3)</p>
+        <el-menu
+          class="sidebar-container"
+          default-active="0"
+          background-color="#2f3b52"
+          text-color="#fff"
+          active-text-color="#ffd04b">
+           <el-submenu :index="changeIndex(firstIndex)" v-for="(first, firstIndex) in projectList" :key="firstIndex+'hostFirst'">
+            <template slot="title">
+              <i class="el-icon-location"></i>
+              <span>{{first.name}}</span>
+            </template>
+            <el-menu-item :index='hostFirstIndex+"hostFirst"' v-for="(hostFirst, hostFirstIndex) in setNavHostList(first.totalCount, first.freeCount, first.infrCount)" :key="hostFirstIndex+'second'" @click="setHostList(first.id, hostFirst.name)">{{hostFirst.name}}({{hostFirst.count}})</el-menu-item>
+            <el-menu-item-group v-for="(second, secondIndex) in first.children" :key="secondIndex">
+              <el-submenu :index="changeIndex(firstIndex, secondIndex)">
+                <template slot="title">{{second.name}}</template>
+                <el-menu-item :index='hostSecondIndex+"hostSecond"' v-for="(hostSecond, hostSecondIndex) in setNavHostList(second.totalCount, second.freeCount, second.infrCount)" :key="hostSecondIndex+'second'" @click="setHostList(second.id, hostSecond.name)">{{hostSecond.name}}({{hostSecond.count}})</el-menu-item>
+              </el-submenu>
+            </el-menu-item-group>
+           </el-submenu>
+        </el-menu>
       </section>
       <nuxt/>
     </section>
@@ -20,13 +37,26 @@
 </template>
 
 <script>
+import { mapActions } from 'vuex'
 export default {
   data () {
     return {
-      hostCount: {}
+      hostCount: {},
+      projectList: [],
+      navHostObj: {
+        0: '全部主机',
+        1: '空闲主机池',
+        2: '企业基础设施'
+      },
+      changeHostName: {
+        '全部主机': 'allHost',
+        '空闲主机池': 'freeHost',
+        '企业基础设施': 'baseFacilty'
+      }
     }
   },
   methods: {
+    ...mapActions(['setHostUrl']),
     getDefaultCount() {
       this.$axios.$get('/api/host/count').then(res => {
         this.hostCount = res.data
@@ -35,17 +65,51 @@ export default {
     handleHrefHost (e) {
       if (e.target.nodeName.toLowerCase() === 'p') {
         const name = e.target.dataset.name
-        console.log(name)
+        const url = `/api/hostList/0?type=${name}`
+        this.setHostUrl(url)
       }
+    },
+    getProjectList () {
+      this.$axios.$get('/api/projectList').then(res => {
+        this.projectList = res
+      })
+    },
+    changeIndex (...val) {
+      if (val.length === 1) {
+        return `${val[0]}`
+      }
+      return `${val[0]}-${val[1]}`
+    },
+    setNavHostList (...val) {
+      const navHostArr = []
+      val.forEach((item, index) => {
+        if (item > 0) {
+          navHostArr.push({
+            name: this.navHostObj[index],
+            count: item
+          })
+        }
+      })
+      return navHostArr
+    },
+    setHostList (id, name) {
+      const url = `/api/hostList/${id}?type=${this.changeHostName[name]}`
+      this.setHostUrl(url)
     }
   },
   created () {
+    this.getProjectList()
     this.getDefaultCount()
   }
 }
 </script>
 
 <style lang="less" scope>
+.sidebar-container{
+  width: 200px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+}
 .navgation{
   overflow: hidden;
 }
@@ -62,9 +126,6 @@ export default {
   margin-top: 60px;
 }
 .nav__right{
-  width: 190px;
-  height: calc(100vh - 60px);
-  text-align: center;
   background-color: #2f3b52;
   color: #fff;
 }
@@ -80,6 +141,9 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    &--item:active{
+      color: #ffd04b;
+    }
   }
 }
 </style>
