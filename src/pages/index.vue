@@ -1,313 +1,153 @@
 <template>
   <div class="wrapper">
-    <div class="left">
-      <!-- <div class="defaultList">
-        <div class="title">默认列表</div>
-        <ul class="list">
-          <li
-            :class="{active: currentLi == 'allHost'}"
-            @click="switch2('allHost')"
-          >
-            全部主机({{ defaultHost.totalCount }})
-          </li>
-          <li
-            :class="{active: currentLi == 'freeHost'}"
-            @click="switch2('freeHost')"
-          >
-            空闲主机池({{ defaultHost.freeCount }})
-          </li>
-          <li
-            :class="{active: currentLi === 'baseFacilty'}"
-            @click="switch2('baseFacilty')"
-          >
-            企业基础设施({{ defaultHost.infrHostCount }})
-          </li>
-        </ul>
-      </div> -->
-      <div class="project-list">
-        <div class="title">工程列表</div>
-        <el-input placeholder="" v-model="filterText" size="small"> </el-input>
-        <el-tree
-          class="project-tree"
-          node-key="name"
-          ref="projectTree"
-          accordion
-          lazy
-          highlight-current
-          :props="projectProps"
-          :filter-node-method="searchProject"
-          :load="loadTreeData"
-          @node-click="nodeClick"
-        >
-          <span slot-scope="{node, data}">
-            <span>{{ node.data.name }}</span> （{{ node.data.count }}）
-          </span>
-        </el-tree>
-      </div>
-    </div>
-    <div class="right">
+    <search :searchGroup='searchForm' v-on:searching="handleSearch"></search>
+    <section class="tableWrapper">
       <el-table style="width: 100%" stripe border :data="hostTableList" v-loading='loading'>
-        <el-table-column :prop="item.prop" :label="item.label" v-for="(item, index) in hostTableConfig.columns" :key="index" :width="item.width"></el-table-column>
+        <el-table-column :prop="item.prop" :label="item.label" v-for="(item, index) in hostTableConfig" :key="index" :width="item.width"></el-table-column>
       </el-table>
       <pagination :pagination='pagination' v-on:sizeChange="handlePagination"></pagination>
-      <!-- <el-data-table
-        v-bind="hostTableConfig"
-        :searchForm="searchForm"
-        :customQuery="customQuery"
-        ref="dataTable"
-      /> -->
-    </div>
+    </section>
   </div>
 </template>
 
 <script>
 import { mapActions } from 'vuex'
 import pagination from '../components/pagination'
+import search from '../components/search'
 export default {
   layout: 'nav',
   data() {
     return {
-      defaultHost: {},
       searchParams: {
         page: 1,
-        per_page: 20
+        per_page: 20,
+        keyword: '',
+        selectTag: ''
       },
-      projectProps: {
-        label: 'name',
-        children: 'children',
-        isLeaf: 'leaf'
-      },
-      filterText: '',
-      hostTableConfig: {
-        // url: '/hire/hostList',
-        // dataPath: 'payload.list',
-        // totalPath: 'payload.totalPage',
-        // hasNew: false,
-        // hasOperation: false,
-        columns: [
-          {
-            label: '外网IP',
-            prop: 'hostIp'
-          },
-          {
-            label: '内网IP',
-            prop: 'localIp'
-          },
-          {
-            label: '分类标签',
-            prop: 'categoryTag'
-          },
-          {
-            label: '主机状态',
-            prop: 'status'
-          },
-          {
-            label: '所属业务分组',
-            prop: 'group',
-            width: '200px'
-          }
-        ],
-        form: []
-      },
-      searchForm: [
+      hostTableConfig: [
         {
-          id: 'ip',
-          label: '内/外网ip',
-          type: 'input'
+          label: '外网IP',
+          prop: 'hostIp'
         },
         {
-          id: 'categoryTag',
+          label: '内网IP',
+          prop: 'localIp'
+        },
+        {
           label: '分类标签',
-          type: 'select',
-          options: []
+          prop: 'categoryTag'
+        },
+        {
+          label: '主机状态',
+          prop: 'status'
+        },
+        {
+          label: '所属业务分组',
+          prop: 'group',
+          width: '200px'
         }
       ],
-      loading: false,
-      pagination: {},
-      customQuery: {
-        type: 'allHost'
-      },
-      currentLi: 'allHost'
-    }
-  },
-  watch: {
-    filterText(val) {
-      this.$refs.projectTree.filter(val)
+      searchForm: [
+        [
+          {
+            id: '11',
+            keyword: '',
+            label: '内/外网ip',
+            type: 'input'
+          },
+          {
+            id: '12',
+            keyword: '',
+            label: '分类标签',
+            type: 'select',
+            options: [
+              {
+                label: '链接',
+                id: '1'
+              },
+              {
+                label: '失联',
+                id: '2'
+              }
+            ]
+          }
+        ]
+      ],
+      loading: false
     }
   },
   computed: {
     hostTableList () {
       return this.$store.state.hostTableList
+    },
+    pagination () {
+      return this.$store.state.paginationConfig
+    },
+    hostUrl () {
+      return this.$store.state.hostUrl
+    }
+  },
+  watch: {
+    hostUrl () {
+      this.fetchHostTableList(this.hostUrl)
     }
   },
   components: {
-    pagination
+    pagination,
+    search
   },
   methods: {
-    ...mapActions(['setHostTableList']),
+    ...mapActions(['setHostTableList', 'setPaginationConfig', 'setHostUrl']),
     handlePagination (type, val) {
       if (type === 'currentChange') {
         this.searchParams.per_page = val
       } else {
-        this.searchParams.per_page = val
+        this.searchParams.page = val
       }
 
     },
-    searchProject(value, data) {
-      if (!value) return true
-      return data[this.projectProps.label].indexOf(value) !== -1
+    fetchHostTableList (url) {
+      this.$axios.get(url).then(res => {
+        this.setHostTableList(res.data.data)
+        this.setPaginationConfig(res.data.pagination)
+      })
     },
-    loadTreeData(node, resolve) {
-      if (node.level === 0) {
-        this.$axios.$get('/hire/projectList').then(res => {
-          resolve(
-            res.payload.list.map(item => {
-              return {
-                name: item.name,
-                id: item.id,
-                count: item.projectTotalCount,
-                type: 'project all',
-                children: [
-                  {
-                    name: '空闲主机',
-                    count: item.projectFreeCount,
-                    type: 'project free',
-                    id: item.id,
-                    leaf: true
-                  },
-                  {
-                    name: '工程基础设施',
-                    count: item.projectInfrCount,
-                    type: 'project facilty',
-                    id: item.id,
-                    leaf: true
-                  }
-                ]
-              }
-            })
-          )
+    handleSearch () {
+      let url = this.hostUrl
+      this.searchParams.keyword = this.searchForm[0][0].keyword
+      this.searchParams.selectTag = this.searchForm[0][1].keyword
+      const keys = Object.keys(this.searchParams)
+      if (this.hostUrl.indexOf('?') !== -1) {
+        let query = url.split('?')
+        if (query[1].indexOf('&') !== -1) {
+          let queryOne = query[1].split('&')[0]
+          url = query[0] + '?' + queryOne
+        }
+        keys.forEach(item => {
+          url = url + `&${item}=${this.searchParams[item]}`
         })
-      } else if (node.level === 1) {
-        this.$axios
-          .$get('/hire/enviroments', {params: {id: node.data.id}})
-          .then(res => {
-            resolve(
-              node.data.children.concat(
-                res.payload.map(item => {
-                  return {
-                    name: item.name,
-                    count: item.envTotalCount,
-                    id: item.id,
-                    type: 'enviroment all',
-                    children: [
-                      {
-                        name: '空闲主机',
-                        count: item.envFreeCount,
-                        type: 'enviroment free',
-                        id: item.id,
-                        leaf: true
-                      },
-                      {
-                        name: '环境基础设施',
-                        count: item.envInfrCount,
-                        type: 'enviroment facilty',
-                        id: item.id,
-                        leaf: true
-                      },
-                      {
-                        name: '服务主机',
-                        count: item.envServiceCount,
-                        type: 'enviroment service',
-                        id: item.id,
-                        leaf: true
-                      }
-                    ]
-                  }
-                })
-              )
-            )
-          })
-      } else if (node.level === 2) {
-        resolve(node.data.children)
-      }
-    },
-    getCategoryTags() {
-      this.$axios.$get('/hire/categoryTags').then(res => {
-        this.searchForm[1].options = res.payload.map(item => {
-          return {
-            value: item,
-            label: item
+      } else {
+        keys.forEach((item, index) => {
+          if (index === 0) {
+            url = url + `?${item}=${this.searchParams[item]}`
+          } else {
+            url = url + `&${item}=${this.searchParams[item]}`
           }
         })
-      })
-    },
-    switch2(where) {
-      this.customQuery.type = where
-      this.currentLi = where
-      this.$refs.dataTable.resetSearch()
-    },
-    nodeClick(data) {
-      this.customQuery.type = data.type
-      this.customQuery.id = data.id
-      this.currentLi = data.type
-      this.$refs.dataTable.resetSearch()
-    },
-    fetchHostTableList () {
-      this.$axios.get('/api/hostList').then(res => {
-        this.setHostTableList(res.data.data)
-        this.pagination = res.data.pagination
-      })
+      }
+      this.setHostUrl(url)
     }
   },
-  mounted() {
-    this.getCategoryTags()
-  },
   created () {
-    this.fetchHostTableList()
+    this.fetchHostTableList(this.hostUrl)
   },
 }
 </script>
 <style lang="less">
 .wrapper {
-  padding: 8px;
-  display: flex;
-
-  .title {
-    margin-bottom: 8px;
-    color: #999;
-    font-size: 14px;
-  }
-
-  .left {
-    width: 250px;
+  .tableWrapper {
     padding: 24px;
-
-    .defaultList {
-      margin-bottom: 16px;
-
-      .list {
-        li {
-          cursor: pointer;
-
-          &:hover {
-            background: #dedede;
-          }
-
-          &.active {
-            background: #f2f5ff;
-
-            &:hover {
-              background: #dedede;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .right {
-    padding: 24px;
-    width: calc(100vw - 600px);
+    width: calc(100vw - 260px);
   }
 }
 </style>
