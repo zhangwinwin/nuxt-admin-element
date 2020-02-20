@@ -1,6 +1,3 @@
-/**
- * Created by levy on 2018/2/12.
- */
 import Vue from 'vue'
 import Element, {MessageBox, Message, Notification} from 'element-ui'
 import ElFormRenderer from '@femessage/el-form-renderer'
